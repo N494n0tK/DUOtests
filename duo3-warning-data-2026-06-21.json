@@ -1,0 +1,52 @@
+{
+  "format": "duo3-warning-save",
+  "version": 1,
+  "exportedAt": "2026-06-21T22:52:52.549Z",
+  "warnings": [
+    {
+      "number": 123,
+      "ja": "「私、もうくたくた。日陰で休憩しましょう｡」「そうだね｡」",
+      "en": "I'm exhausted! Let's take a break in the shade. \"Why not?\""
+    },
+    {
+      "number": 124,
+      "ja": "「ボブ、この自動販売機、故障してるわ｡」「何だって！喉が乾いて死にそうだよ！」",
+      "en": "Bob, this vending machine is out of order. \"Oh no! I'm dying of thirst!\""
+    },
+    {
+      "number": 125,
+      "ja": "彼は空腹と疲労で気を失ったが、しばらくして意識を取り戻した。",
+      "en": "He fainted with hunger and fatigue, but came to after a while."
+    },
+    {
+      "number": 126,
+      "ja": "たった一つの家具を除けば、講堂はがらんどうだった。",
+      "en": "The auditorium was empty except for a single piece of furniture."
+    },
+    {
+      "number": 128,
+      "ja": "彼の60歳のいとこが湖畔の不動産を相続した。",
+      "en": "His sixty-year-old cousin inherited a piece of real estate by a lake."
+    },
+    {
+      "number": 129,
+      "ja": "雑談はこの辺にして、本題に入りましょう。",
+      "en": "So much for small talk. Let's get down to business."
+    },
+    {
+      "number": 130,
+      "ja": "ルーシーは、契約書にサインさせようとする強引な販売員に腹を立てた。",
+      "en": "Lucy resented the aggressive salesman trying to make her sign the contract."
+    },
+    {
+      "number": 131,
+      "ja": "私たちの株式投資への意欲をそぐような要因がかなりある。",
+      "en": "There are a number of factors discouraging us from investing in stocks."
+    },
+    {
+      "number": 132,
+      "ja": "日本は様々な原料を輸入し、工業製品を輸出している。",
+      "en": "Japan imports various raw materials and exports manufactured goods."
+    }
+  ]
+}

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DUO Style Training System - Full 560 Sentences</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg?v=1.1.4">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@700;900&family=Oswald:wght@700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="wrapper">
+    <div class="app-container">
+        
+        <div id="view-setup" class="view active">
+            <button type="button" id="version-button" class="version-button" aria-label="バージョン情報" title="バージョン情報">⚙</button>
+            <div class="duo-header">
+                <div class="duo-title-line">
+                    <h1 class="duo-title-main">DUO</h1>
+                    <span class="duo-version">3.0</span>
+                </div>
+                <p class="duo-desc">
+                    COMPOSER: System<br>
+                    現代英語の重要単語・熟語を<br>マスターするためのトレーニング
+                </p>
+            </div>
+
+            <div class="setup-group">
+                <button type="button" id="answer-mode-settings-button" class="answer-mode-settings-button">
+                    <span class="settings-button-label">ANSWER MODE</span>
+                    <span id="answer-mode-summary">全文入力</span>
+                    <span class="settings-button-change">CHANGE</span>
+                </button>
+
+                <select id="lesson-select"></select>
+                <select id="section-select"></select>
+
+                <fieldset id="custom-range" class="custom-range" hidden>
+                    <legend>CUSTOM RANGE</legend>
+                    <div class="range-inputs">
+                        <label>
+                            <span>START</span>
+                            <input type="number" id="range-start" min="1" step="1" value="1" inputmode="numeric">
+                        </label>
+                        <span class="range-separator" aria-hidden="true">TO</span>
+                        <label>
+                            <span>END</span>
+                            <input type="number" id="range-end" min="1" step="1" value="560" inputmode="numeric">
+                        </label>
+                    </div>
+                    <p id="range-help" class="range-help">AVAILABLE: 1 - 560</p>
+                    <p id="range-error" class="range-error" role="alert"></p>
+                </fieldset>
+                
+                <div class="checkbox-container">
+                    <label class="duo-check">
+                        <input type="checkbox" id="random-check">
+                        <span class="check-box"></span>
+                        🔀 ランダム出題 (RANDOMIZE)
+                    </label>
+                    <label class="duo-check sudden-check">
+                        <input type="checkbox" id="sudden-death-check" onchange="handleModeChange('sudden')">
+                        <span class="check-box"></span>
+                        💀 サドンデス (1ミス即終了)
+                    </label>
+                    <label class="duo-check practice-check">
+                        <input type="checkbox" id="practice-check" onchange="handleModeChange('practice')">
+                        <span class="check-box"></span>
+                        🧠 PRACTICE (間違えたら確認＆再挑戦)
+                    </label>
+                </div>
+            </div>
+            <p style="text-align: center; color: var(--text-muted); font-size: 0.9rem; margin-top: -10px; font-weight: bold;">Press [ ENTER ] to start</p>
+            <button class="btn" onclick="startQuiz()">TRAINING START</button>
+            <button class="btn btn-secondary" onclick="openWarningDB()">⚠️ WARNING DATABASE</button>
+        </div>
+
+        <div id="view-quiz" class="view">
+            <div class="header-info">
+                <span id="progress-text">SEQ. 1 / 15</span>
+                <span id="time-text">TIME: 30.0</span>
+            </div>
+            <div class="timer-container">
+                <div id="timer-bar" class="timer-bar"></div>
+            </div>
+            <p class="esc-hint">Press [ ESC ] to pause.</p>
+
+            <div class="question-wrapper">
+                <p id="ja-question" class="ja-text">日本語の問題</p>
+                <div id="cloze-sentence" class="cloze-sentence" aria-label="穴埋め英文"></div>
+                <p id="hint-text" class="hint"></p>
+            </div>
+
+            <div id="full-answer-wrapper" class="input-wrapper">
+                <input type="text" id="answer-input" placeholder="Type the sentence here..." autocomplete="off">
+            </div>
+
+            <div id="practice-overlay" class="practice-overlay">
+                <div class="practice-box">
+                    <p id="practice-question-number" class="practice-question-number">QUESTION NO. 1</p>
+                    <h2 class="practice-title">DATA MISMATCH</h2>
+                    <div class="practice-normal-view practice-answer-panel">
+                        <p class="practice-answer-row">
+                            <strong class="practice-correct-label">[ CORRECT (正解) ]</strong><br>
+                            <span id="po-correct" class="practice-answer-text"></span>
+                        </p>
+                        <p class="practice-answer-row practice-answer-row-last">
+                            <strong class="practice-user-label">[ YOUR ANS (あなたの回答) ]</strong><br>
+                            <span id="po-user" class="practice-answer-text practice-user-text"></span>
+                        </p>
+                    </div>
+                    <div class="practice-correction-view" aria-live="polite">
+                        <span class="correction-view-label">YOUR ANSWER / CORRECTED</span>
+                        <div id="po-correction" class="po-correction"></div>
+                    </div>
+                    <label class="duo-check practice-warning-toggle">
+                        <input type="checkbox" id="practice-warning-check">
+                        <span class="check-box"></span>
+                        <span id="practice-warning-label">WARNING DATABASE に登録</span>
+                    </label>
+                    <p class="practice-retry-hint">Press [ ENTER ] to retry</p>
+                    <button class="btn practice-retry-button" onclick="hidePracticeFeedback()">RETRY (再挑戦)</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-result" class="view">
+            <div class="result-content" style="text-align: center;">
+                <h1 id="result-title" style="margin-bottom: 10px; font-size: 3rem; font-family: 'Oswald', sans-serif; font-weight: 900; text-shadow: 2px 2px 0 #000; color: var(--duo-yellow);">MISSION COMPLETE</h1>
+                <div id="final-score" class="score">0 / 0</div>
+                <p id="result-message" style="font-weight: 900; margin-bottom: 10px; font-size: 1.4rem;"></p>
+                <p style="color: var(--text-main); font-weight: bold; font-size: 1rem; margin-bottom: 20px;">※右側のチェックを入れると要注意単語(WARNING)に登録されます</p>
+                <div id="mistakes-container" class="mistake-list" style="display: none;"></div>
+                <p style="color: var(--text-muted); font-size: 0.9rem; font-weight: bold;">Press [ ENTER ] to return</p>
+                <button class="btn" onclick="backToTitle()">RETURN TO HOME</button>
+            </div>
+        </div>
+
+        <div id="view-warning-db" class="view">
+            <h1 style="color: var(--duo-yellow); text-shadow: 2px 2px 0 #000; font-family: 'Oswald', sans-serif; font-weight: 900; font-size: 2.5rem; text-align: center; margin-top: 0;">⚠️ WARNING DB</h1>
+            <p style="text-align: center; color: var(--text-main); font-weight: bold; font-size: 1rem;">チェックを外すとデータベースから削除されます。</p>
+            <div class="warning-data-actions">
+                <button type="button" id="warning-export-button" class="warning-data-button">↓ SAVE DATA</button>
+                <button type="button" id="warning-import-button" class="warning-data-button">↑ LOAD DATA</button>
+                <input type="file" id="warning-import-input" accept="application/json,.json" hidden>
+            </div>
+            <p id="warning-data-status" class="warning-data-status" aria-live="polite"></p>
+            <div id="warning-db-container" class="mistake-list" style="max-height: 450px;"></div>
+            <p style="text-align: center; color: var(--text-muted); font-size: 0.9rem; margin-top: 15px; font-weight: bold;">Press [ ENTER ] to return</p>
+            <button class="btn btn-secondary" onclick="backToTitle()">RETURN TO HOME</button>
+        </div>
+
+    </div>
+</div>
+
+<div id="answer-mode-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="answer-mode-modal-title" hidden>
+    <div class="modal-box answer-mode-modal-box">
+        <h2 id="answer-mode-modal-title">ANSWER MODE</h2>
+        <fieldset class="training-mode-selector modal-mode-selector">
+            <label class="mode-option">
+                <input type="radio" name="answer-mode" id="mode-full" value="full" checked>
+                <span>全文入力</span>
+            </label>
+            <label class="mode-option">
+                <input type="radio" name="answer-mode" id="mode-cloze" value="cloze">
+                <span>穴埋め</span>
+            </label>
+        </fieldset>
+        <div id="cloze-count-setting" class="cloze-count-setting" hidden>
+            <label for="blank-count-input">空欄の数</label>
+            <input type="number" id="blank-count-input" min="1" step="1" inputmode="numeric" value="3">
+            <p class="blank-count-note">文の単語数を超えた場合は、すべての単語が空欄になります。</p>
+        </div>
+        <button type="button" id="answer-mode-confirm" class="blank-count-confirm mode-confirm">決定</button>
+        <button type="button" id="answer-mode-cancel" class="modal-cancel">キャンセル</button>
+    </div>
+</div>
+
+<div id="pause-modal" class="modal-overlay pause-modal" role="dialog" aria-modal="true" aria-labelledby="pause-modal-title" hidden>
+    <div class="modal-box pause-box">
+        <p class="pause-kicker">TRAINING SUSPENDED</p>
+        <h2 id="pause-modal-title">PAUSED</h2>
+        <p class="pause-time" id="pause-time">TIME: 30.0</p>
+        <button type="button" id="pause-resume-button" class="blank-count-confirm pause-resume-button">RESUME</button>
+        <button type="button" id="pause-quit-button" class="pause-quit-button">QUIT TRAINING</button>
+        <p class="pause-key-hint">ENTER: QUIT / ESC: RESUME</p>
+    </div>
+</div>
+
+<div id="version-modal" class="modal-overlay version-modal" role="dialog" aria-modal="true" aria-labelledby="version-modal-title" hidden>
+    <div class="modal-box version-box">
+        <p class="version-kicker">DUO STYLE TRAINING SYSTEM</p>
+        <h2 id="version-modal-title">VERSION</h2>
+        <p id="version-number" class="version-number">Ver.1.1.4</p>
+        <dl class="version-details">
+            <div>
+                <dt>UPDATED</dt>
+                <dd id="version-updated-at">2026年6月22日</dd>
+            </div>
+        </dl>
+        <button type="button" id="version-close-button" class="blank-count-confirm version-close-button">CLOSE</button>
+    </div>
+</div>
+
+<div id="pop-feedback" class="pop-feedback"></div>
+
+<script src="word-data.js"></script>
+<script src="app-meta.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
