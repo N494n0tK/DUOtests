@@ -10,6 +10,9 @@ let combo = 0;
 let maxCombo = 0;
 let totalPoints = 0;
 let lastTickSecond = null;
+let timerEnabled = true;
+let answeredCorrect = [];
+let commandToastTimer = null;
 
 let isSuddenDeath = false;
 let isPracticeMode = false;
@@ -75,6 +78,7 @@ const comboDisplay = document.getElementById('combo-display');
 const timerContainer = document.querySelector('.timer-container');
 const questionWrapper = document.querySelector('.question-wrapper');
 const soundToggle = document.getElementById('sound-toggle');
+const commandToast = document.getElementById('command-toast');
 
 function questionCenter() {
     const rect = questionWrapper.getBoundingClientRect();
@@ -122,6 +126,119 @@ function animateNumber(el, target, duration, formatter) {
 function updateSoundToggle() {
     soundToggle.textContent = SFX.enabled ? '🔊' : '🔇';
     soundToggle.title = SFX.enabled ? '効果音 ON' : '効果音 OFF';
+}
+
+// ---------- コマンドモード ----------
+
+function updateCommandModeClass(input) {
+    input.classList.toggle('command-mode', input.value.trimStart().startsWith('/'));
+}
+
+function getCommandText() {
+    if (isClozeMode) {
+        const inputs = Array.from(clozeSentence.querySelectorAll('.cloze-input'));
+        const commandInput = inputs.find(input => input.value.trim().startsWith('/'));
+        return commandInput ? commandInput.value.trim() : null;
+    }
+    const value = answerInput.value.trim();
+    return value.startsWith('/') ? value : null;
+}
+
+function clearCommandInput() {
+    if (isClozeMode) {
+        const commandInput = Array.from(clozeSentence.querySelectorAll('.cloze-input'))
+            .find(input => input.value.trim().startsWith('/'));
+        if (commandInput) {
+            commandInput.value = '';
+            commandInput.classList.remove('command-mode');
+            commandInput.focus();
+        }
+    } else {
+        answerInput.value = '';
+        answerInput.classList.remove('command-mode');
+        answerInput.focus();
+    }
+}
+
+function showCommandToast(message, isError = false) {
+    commandToast.textContent = message;
+    commandToast.className = `command-toast show${isError ? ' error' : ''}`;
+    clearTimeout(commandToastTimer);
+    commandToastTimer = setTimeout(() => commandToast.classList.remove('show'), 2200);
+}
+
+function setTimerOffDisplay() {
+    clearInterval(timerInterval);
+    lastTickSecond = null;
+    timerContainer.classList.remove('danger');
+    timerBar.style.transition = 'none';
+    timerBar.style.width = '100%';
+    timeText.textContent = 'TIME: ∞';
+    timeText.style.color = 'var(--text-muted)';
+}
+
+function goBack(steps) {
+    const target = Math.max(0, currentIndex - steps);
+    if (target === currentIndex) return 0;
+    for (let i = target; i < currentIndex; i++) {
+        if (answeredCorrect[i]) {
+            score--;
+            answeredCorrect[i] = false;
+        }
+    }
+    mistakes = mistakes.filter(m => m.index === undefined || m.index < target);
+    const moved = currentIndex - target;
+    currentIndex = target;
+    loadQuestion();
+    return moved;
+}
+
+function executeCommand(text) {
+    const [name, ...args] = text.slice(1).trim().split(/\s+/);
+    const arg = (args[0] || '').toLowerCase();
+    clearCommandInput();
+
+    switch ((name || '').toLowerCase()) {
+        case 'time':
+            if (arg === 'true') {
+                timerEnabled = true;
+                resetTimerBar();
+                startTimer();
+                showCommandToast('⏱ TIMER: ON');
+                SFX.play('click');
+            } else if (arg === 'false') {
+                timerEnabled = false;
+                setTimerOffDisplay();
+                showCommandToast('⏱ TIMER: OFF');
+                SFX.play('click');
+            } else if (arg === 'up') {
+                showCommandToast('⏱ TIME UP!', true);
+                submitAnswer(true);
+            } else {
+                showCommandToast('USAGE: /time true | false | up', true);
+                SFX.play('wrong');
+            }
+            break;
+        case 'back': {
+            const steps = args.length === 0 ? 1 : Number(args[0]);
+            if (!Number.isSafeInteger(steps) || steps < 1) {
+                showCommandToast('USAGE: /back <1以上の数字>', true);
+                SFX.play('wrong');
+                break;
+            }
+            const moved = goBack(steps);
+            if (moved > 0) {
+                showCommandToast(`⏪ ${moved}問戻りました (NO.${currentIndex + 1})`);
+                SFX.play('click');
+            } else {
+                showCommandToast('この範囲の最初の問題です', true);
+            }
+            break;
+        }
+        default:
+            showCommandToast(`UNKNOWN COMMAND: /${name}`, true);
+            SFX.play('wrong');
+    }
 }
 
 function handleModeChange(mode) {
@@ -215,6 +332,10 @@ function init() {
     });
     document.addEventListener('click', (e) => {
         if (e.target.closest('button:not(#sound-toggle), .mode-option, .duo-check')) SFX.play('click');
+    });
+    answerInput.addEventListener('input', () => updateCommandModeClass(answerInput));
+    clozeSentence.addEventListener('input', (e) => {
+        if (e.target.matches('.cloze-input')) updateCommandModeClass(e.target);
     });
 
     document.addEventListener('keydown', (e) => {
@@ -796,6 +917,8 @@ function startQuiz() {
     combo = 0;
     maxCombo = 0;
     totalPoints = 0;
+    timerEnabled = true;
+    answeredCorrect = [];
     hideCombo();
 
     SFX.play('start');
@@ -829,8 +952,12 @@ function loadQuestion() {
     clearCurrentAnswer();
     hasMistakedCurrent = false;
 
-    resetTimerBar();
-    startTimer();
+    if (timerEnabled) {
+        resetTimerBar();
+        startTimer();
+    } else {
+        setTimerOffDisplay();
+    }
 }
 
 function resetTimerBar() {
@@ -888,10 +1015,10 @@ function resumeTimer() {
 function openPauseModal() {
     if (isQuizPaused) return;
     isQuizPaused = true;
-    resumeTimerAfterPause = !inPracticeFeedback;
+    resumeTimerAfterPause = !inPracticeFeedback && timerEnabled;
     pausedFocusElement = document.activeElement;
     if (resumeTimerAfterPause) pauseTimer();
-    pauseTime.textContent = `TIME: ${Math.max(0, timeLeft).toFixed(1)}`;
+    pauseTime.textContent = timerEnabled ? `TIME: ${Math.max(0, timeLeft).toFixed(1)}` : 'TIME: ∞';
     pauseModal.hidden = false;
     document.getElementById('pause-resume-button').focus();
 }
@@ -971,15 +1098,28 @@ function hidePracticeFeedback() {
     inPracticeFeedback = false;
     
     clearCurrentAnswer();
-    resetTimerBar();
-    startTimer();
+    if (timerEnabled) {
+        resetTimerBar();
+        startTimer();
+    } else {
+        setTimerOffDisplay();
+    }
 }
 
 function submitAnswer(isTimeUp = false) {
     if (inPracticeFeedback) return;
+
+    if (!isTimeUp) {
+        const commandText = getCommandText();
+        if (commandText) {
+            executeCommand(commandText);
+            return;
+        }
+    }
+
     clearInterval(timerInterval);
     const q = currentQuestions[currentIndex];
-    
+
     const rawUserAnswer = isClozeMode ? getClozeUserAnswer(q.en) : answerInput.value;
     const correctAnswerClean = getCleanWord(q.en);
     const userAnswerClean = getCleanWord(rawUserAnswer);
@@ -988,7 +1128,7 @@ function submitAnswer(isTimeUp = false) {
     if (isCorrect) {
         combo++;
         maxCombo = Math.max(maxCombo, combo);
-        const timeBonus = Math.max(0, Math.round(timeLeft * 10));
+        const timeBonus = timerEnabled ? Math.max(0, Math.round(timeLeft * 10)) : 0;
         const gained = Math.round((100 + timeBonus) * (1 + (combo - 1) * 0.1));
         totalPoints += gained;
 
@@ -1000,14 +1140,17 @@ function submitAnswer(isTimeUp = false) {
         SFX.play('correct', combo);
 
         triggerPopAnim(true);
-        if (!hasMistakedCurrent) score++;
+        if (!hasMistakedCurrent) {
+            score++;
+            answeredCorrect[currentIndex] = true;
+        }
 
         currentIndex++;
         if (currentIndex < currentQuestions.length) loadQuestion();
         else showResult(false);
     } else {
         if (!hasMistakedCurrent) {
-            mistakes.push({ ja: q.ja, en: q.en, isTimeUp: isTimeUp, userAns: rawUserAnswer });
+            mistakes.push({ index: currentIndex, ja: q.ja, en: q.en, isTimeUp: isTimeUp, userAns: rawUserAnswer });
             hasMistakedCurrent = true;
         }
 

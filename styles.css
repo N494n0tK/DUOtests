@@ -1002,3 +1002,54 @@
         .result-rank.stamp { animation: none; }
         .btn:hover::after { left: -80%; transition: none; }
     }
+
+    /* ============================================
+       COMMAND MODE - /で始まる入力をコンソール風に
+       ============================================ */
+
+    input[type="text"].command-mode,
+    input[type="text"].command-mode:focus {
+        font-family: 'Consolas', 'Courier New', ui-monospace, monospace;
+        background: #081020;
+        border-color: #00e676;
+        color: #00e676;
+        caret-color: #00e676;
+        text-shadow: 0 0 8px rgba(0, 230, 118, 0.45);
+        box-shadow: 0 0 14px rgba(0, 230, 118, 0.35), 0 5px 15px rgba(0,0,0,0.3);
+    }
+    .cloze-sentence .cloze-input.command-mode,
+    .cloze-sentence .cloze-input.command-mode:focus {
+        font-family: 'Consolas', 'Courier New', ui-monospace, monospace;
+        background: #081020;
+        color: #00e676;
+        caret-color: #00e676;
+        border-bottom-color: #00e676;
+        box-shadow: 0 0 10px rgba(0, 230, 118, 0.35);
+    }
+
+    .command-toast {
+        position: fixed;
+        bottom: 34px;
+        left: 50%;
+        z-index: 520;
+        max-width: calc(100vw - 40px);
+        padding: 11px 24px;
+        box-sizing: border-box;
+        border: 2px solid #00e676;
+        border-radius: 6px;
+        background: rgba(4, 14, 32, 0.94);
+        color: #00e676;
+        font: 700 1rem/1.4 'Consolas', 'Courier New', ui-monospace, monospace;
+        text-align: center;
+        opacity: 0;
+        transform: translate(-50%, 14px);
+        pointer-events: none;
+        transition: opacity 0.18s, transform 0.18s;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 16px rgba(0, 230, 118, 0.25);
+    }
+    .command-toast.show { opacity: 1; transform: translate(-50%, 0); }
+    .command-toast.error {
+        border-color: var(--duo-red);
+        color: #ff8a80;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 16px rgba(211, 16, 16, 0.35);
+    }
