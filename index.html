@@ -10,11 +10,14 @@
 </head>
 <body>
 
+<canvas id="fx-bg" aria-hidden="true"></canvas>
+
 <div class="wrapper">
     <div class="app-container">
         
         <div id="view-setup" class="view active">
             <button type="button" id="version-button" class="version-button" aria-label="バージョン情報" title="バージョン情報">⚙</button>
+            <button type="button" id="sound-toggle" class="version-button sound-button" aria-label="効果音の切り替え" title="効果音 ON/OFF">🔊</button>
             <div class="duo-header">
                 <div class="duo-title-line">
                     <h1 class="duo-title-main">DUO</h1>
@@ -98,27 +101,29 @@
 
             <div id="practice-overlay" class="practice-overlay">
                 <div class="practice-box">
-                    <p id="practice-question-number" class="practice-question-number">QUESTION NO. 1</p>
-                    <h2 class="practice-title">DATA MISMATCH</h2>
-                    <div class="practice-normal-view practice-answer-panel">
-                        <p class="practice-answer-row">
-                            <strong class="practice-correct-label">[ CORRECT (正解) ]</strong><br>
-                            <span id="po-correct" class="practice-answer-text"></span>
-                        </p>
-                        <p class="practice-answer-row practice-answer-row-last">
-                            <strong class="practice-user-label">[ YOUR ANS (あなたの回答) ]</strong><br>
-                            <span id="po-user" class="practice-answer-text practice-user-text"></span>
-                        </p>
+                    <div class="practice-scroll">
+                        <p id="practice-question-number" class="practice-question-number">QUESTION NO. 1</p>
+                        <h2 class="practice-title">DATA MISMATCH</h2>
+                        <div class="practice-normal-view practice-answer-panel">
+                            <p class="practice-answer-row">
+                                <strong class="practice-correct-label">[ CORRECT (正解) ]</strong><br>
+                                <span id="po-correct" class="practice-answer-text"></span>
+                            </p>
+                            <p class="practice-answer-row practice-answer-row-last">
+                                <strong class="practice-user-label">[ YOUR ANS (あなたの回答) ]</strong><br>
+                                <span id="po-user" class="practice-answer-text practice-user-text"></span>
+                            </p>
+                        </div>
+                        <div class="practice-correction-view" aria-live="polite">
+                            <span class="correction-view-label">YOUR ANSWER / CORRECTED</span>
+                            <div id="po-correction" class="po-correction"></div>
+                        </div>
+                        <label class="duo-check practice-warning-toggle">
+                            <input type="checkbox" id="practice-warning-check">
+                            <span class="check-box"></span>
+                            <span id="practice-warning-label">WARNING DATABASE に登録</span>
+                        </label>
                     </div>
-                    <div class="practice-correction-view" aria-live="polite">
-                        <span class="correction-view-label">YOUR ANSWER / CORRECTED</span>
-                        <div id="po-correction" class="po-correction"></div>
-                    </div>
-                    <label class="duo-check practice-warning-toggle">
-                        <input type="checkbox" id="practice-warning-check">
-                        <span class="check-box"></span>
-                        <span id="practice-warning-label">WARNING DATABASE に登録</span>
-                    </label>
                     <p class="practice-retry-hint">Press [ ENTER ] to retry</p>
                     <button class="btn practice-retry-button" onclick="hidePracticeFeedback()">RETRY (再挑戦)</button>
                 </div>
@@ -128,7 +133,25 @@
         <div id="view-result" class="view">
             <div class="result-content" style="text-align: center;">
                 <h1 id="result-title" style="margin-bottom: 10px; font-size: 3rem; font-family: 'Oswald', sans-serif; font-weight: 900; text-shadow: 2px 2px 0 #000; color: var(--duo-yellow);">MISSION COMPLETE</h1>
+                <div id="result-rank" class="result-rank" aria-hidden="true">
+                    <span id="rank-letter" class="rank-letter">S</span>
+                    <span class="rank-caption">RANK</span>
+                </div>
                 <div id="final-score" class="score">0 / 0</div>
+                <div class="result-stats">
+                    <div class="stat-box">
+                        <span class="stat-label">SCORE</span>
+                        <span id="stat-points" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">ACCURACY</span>
+                        <span id="stat-accuracy" class="stat-value">0%</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">MAX COMBO</span>
+                        <span id="stat-combo" class="stat-value">0</span>
+                    </div>
+                </div>
                 <p id="result-message" style="font-weight: 900; margin-bottom: 10px; font-size: 1.4rem;"></p>
                 <p style="color: var(--text-main); font-weight: bold; font-size: 1rem; margin-bottom: 20px;">※右側のチェックを入れると要注意単語(WARNING)に登録されます</p>
                 <div id="mistakes-container" class="mistake-list" style="display: none;"></div>
@@ -192,11 +215,11 @@
     <div class="modal-box version-box">
         <p class="version-kicker">DUO STYLE TRAINING SYSTEM</p>
         <h2 id="version-modal-title">VERSION</h2>
-        <p id="version-number" class="version-number">Ver.1.1.4</p>
+        <p id="version-number" class="version-number">Ver.1.1.6</p>
         <dl class="version-details">
             <div>
                 <dt>UPDATED</dt>
-                <dd id="version-updated-at">2026年6月22日</dd>
+                <dd id="version-updated-at">2026年7月16日</dd>
             </div>
         </dl>
         <button type="button" id="version-close-button" class="blank-count-confirm version-close-button">CLOSE</button>
@@ -204,9 +227,14 @@
 </div>
 
 <div id="pop-feedback" class="pop-feedback"></div>
+<div id="combo-display" class="combo-display" aria-hidden="true"></div>
+<div id="command-toast" class="command-toast" role="status" aria-live="polite"></div>
+
+<canvas id="fx-canvas" aria-hidden="true"></canvas>
 
 <script src="word-data.js"></script>
 <script src="app-meta.js"></script>
+<script src="effects.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
