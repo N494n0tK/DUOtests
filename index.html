@@ -101,27 +101,29 @@
 
             <div id="practice-overlay" class="practice-overlay">
                 <div class="practice-box">
-                    <p id="practice-question-number" class="practice-question-number">QUESTION NO. 1</p>
-                    <h2 class="practice-title">DATA MISMATCH</h2>
-                    <div class="practice-normal-view practice-answer-panel">
-                        <p class="practice-answer-row">
-                            <strong class="practice-correct-label">[ CORRECT (正解) ]</strong><br>
-                            <span id="po-correct" class="practice-answer-text"></span>
-                        </p>
-                        <p class="practice-answer-row practice-answer-row-last">
-                            <strong class="practice-user-label">[ YOUR ANS (あなたの回答) ]</strong><br>
-                            <span id="po-user" class="practice-answer-text practice-user-text"></span>
-                        </p>
+                    <div class="practice-scroll">
+                        <p id="practice-question-number" class="practice-question-number">QUESTION NO. 1</p>
+                        <h2 class="practice-title">DATA MISMATCH</h2>
+                        <div class="practice-normal-view practice-answer-panel">
+                            <p class="practice-answer-row">
+                                <strong class="practice-correct-label">[ CORRECT (正解) ]</strong><br>
+                                <span id="po-correct" class="practice-answer-text"></span>
+                            </p>
+                            <p class="practice-answer-row practice-answer-row-last">
+                                <strong class="practice-user-label">[ YOUR ANS (あなたの回答) ]</strong><br>
+                                <span id="po-user" class="practice-answer-text practice-user-text"></span>
+                            </p>
+                        </div>
+                        <div class="practice-correction-view" aria-live="polite">
+                            <span class="correction-view-label">YOUR ANSWER / CORRECTED</span>
+                            <div id="po-correction" class="po-correction"></div>
+                        </div>
+                        <label class="duo-check practice-warning-toggle">
+                            <input type="checkbox" id="practice-warning-check">
+                            <span class="check-box"></span>
+                            <span id="practice-warning-label">WARNING DATABASE に登録</span>
+                        </label>
                     </div>
-                    <div class="practice-correction-view" aria-live="polite">
-                        <span class="correction-view-label">YOUR ANSWER / CORRECTED</span>
-                        <div id="po-correction" class="po-correction"></div>
-                    </div>
-                    <label class="duo-check practice-warning-toggle">
-                        <input type="checkbox" id="practice-warning-check">
-                        <span class="check-box"></span>
-                        <span id="practice-warning-label">WARNING DATABASE に登録</span>
-                    </label>
                     <p class="practice-retry-hint">Press [ ENTER ] to retry</p>
                     <button class="btn practice-retry-button" onclick="hidePracticeFeedback()">RETRY (再挑戦)</button>
                 </div>
