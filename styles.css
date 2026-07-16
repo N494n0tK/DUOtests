@@ -48,7 +48,19 @@
         width: 100%;
         max-width: 850px;
         position: relative;
+        z-index: 1;
     }
+
+    #fx-bg,
+    #fx-canvas {
+        position: fixed;
+        inset: 0;
+        width: 100vw;
+        height: 100vh;
+        pointer-events: none;
+    }
+    #fx-bg { z-index: 0; }
+    #fx-canvas { z-index: 500; }
 
     .app-container {
         background: rgba(6, 26, 69, 0.95);
@@ -73,12 +85,17 @@
     .view { position: relative; z-index: 1; display: none; }
     .view.active {
         display: block;
-        animation: fade-in 0.3s ease-out forwards;
+        animation: view-in 0.4s cubic-bezier(0.22, 1.2, 0.36, 1) forwards;
     }
 
     @keyframes fade-in {
         0% { opacity: 0; }
         100% { opacity: 1; }
+    }
+
+    @keyframes view-in {
+        0% { opacity: 0; transform: translateY(16px) scale(0.985); }
+        100% { opacity: 1; transform: none; }
     }
 
     .duo-header {
@@ -103,6 +120,11 @@
         line-height: 1;
         letter-spacing: 0;
         text-shadow: 3px 3px 0 #000, 6px 6px 15px rgba(0,0,0,0.8);
+        animation: title-glow 3.2s ease-in-out infinite;
+    }
+    @keyframes title-glow {
+        0%, 100% { text-shadow: 3px 3px 0 #000, 6px 6px 15px rgba(0,0,0,0.8), 0 0 0 rgba(253, 219, 0, 0); }
+        50% { text-shadow: 3px 3px 0 #000, 6px 6px 15px rgba(0,0,0,0.8), 0 0 32px rgba(253, 219, 0, 0.55); }
     }
     .duo-version {
         font-family: 'Oswald', sans-serif;
@@ -145,6 +167,13 @@
         transform: rotate(18deg);
     }
     .version-button:focus-visible { outline: 3px solid #ffffff; outline-offset: 3px; }
+
+    .sound-button {
+        right: 70px;
+        font-size: 1.05rem;
+        line-height: 1;
+    }
+    .sound-button:hover { transform: scale(1.12); }
 
     .answer-mode-settings-button {
         display: grid;
@@ -301,7 +330,21 @@
         text-shadow: 2px 2px 2px rgba(0,0,0,0.8);
         box-shadow: 0 5px 15px rgba(0,0,0,0.4);
         margin-bottom: 15px; letter-spacing: 2px;
+        position: relative; overflow: hidden;
     }
+    .btn::after {
+        content: '';
+        position: absolute;
+        top: -20%;
+        left: -80%;
+        width: 45%;
+        height: 140%;
+        background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+        transform: skewX(-20deg);
+        pointer-events: none;
+        transition: left 0s;
+    }
+    .btn:hover::after { left: 130%; transition: left 0.55s ease-out; }
     .btn:hover { filter: brightness(1.15); transform: translateY(-2px); }
     .btn:active { transform: translateY(2px); box-shadow: 0 2px 5px rgba(0,0,0,0.4); }
 
@@ -323,6 +366,27 @@
         box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
     }
     .timer-bar { height: 100%; width: 100%; background-color: var(--duo-yellow); }
+    .timer-container.danger {
+        animation: danger-glow 0.5s ease-in-out infinite;
+    }
+    .timer-container.danger .timer-bar {
+        background-color: var(--duo-red);
+    }
+    @keyframes danger-glow {
+        0%, 100% { box-shadow: inset 0 2px 4px rgba(0,0,0,0.5), 0 0 4px rgba(255, 23, 68, 0.3); }
+        50% { box-shadow: inset 0 2px 4px rgba(0,0,0,0.5), 0 0 18px rgba(255, 23, 68, 0.85); }
+    }
+
+    .question-wrapper.flash-good { animation: flash-good 0.5s ease-out; }
+    .question-wrapper.flash-bad { animation: flash-bad 0.5s ease-out; }
+    @keyframes flash-good {
+        0% { border-color: #2eff8b; box-shadow: 0 0 0 6px rgba(46, 255, 139, 0.55), 0 8px 20px rgba(0,0,0,0.3); }
+        100% { border-color: var(--duo-yellow); box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
+    }
+    @keyframes flash-bad {
+        0% { border-color: var(--duo-red); box-shadow: 0 0 0 6px rgba(211, 16, 16, 0.55), 0 8px 20px rgba(0,0,0,0.3); }
+        100% { border-color: var(--duo-yellow); box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
+    }
 
     .question-wrapper {
         text-align: center; margin-bottom: 40px; padding: 40px 20px;
@@ -764,4 +828,169 @@
         .practice-warning-toggle { margin-bottom: 8px; padding: 8px; font-size: 0.85rem; }
         .practice-retry-hint { margin-bottom: 7px; font-size: 0.78rem; }
         .practice-retry-button { padding: 10px; font-size: 1.05rem; }
+    }
+
+    /* ============================================
+       GAME FX - シェイク / コンボ / ランク / 演出
+       ============================================ */
+
+    .fx-shake { animation: fx-shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97); }
+    .fx-shake-strong { animation: fx-shake-strong 0.55s cubic-bezier(0.36, 0.07, 0.19, 0.97); }
+    @keyframes fx-shake {
+        10%, 90% { transform: translate(-2px, 1px); }
+        20%, 80% { transform: translate(4px, -2px); }
+        30%, 50%, 70% { transform: translate(-6px, 2px); }
+        40%, 60% { transform: translate(6px, -1px); }
+    }
+    @keyframes fx-shake-strong {
+        10%, 90% { transform: translate(-4px, 3px) rotate(-0.4deg); }
+        20%, 80% { transform: translate(8px, -4px) rotate(0.4deg); }
+        30%, 50%, 70% { transform: translate(-12px, 5px) rotate(-0.6deg); }
+        40%, 60% { transform: translate(12px, -3px) rotate(0.5deg); }
+    }
+
+    .combo-display {
+        position: fixed;
+        top: 26px;
+        left: 50%;
+        z-index: 160;
+        display: none;
+        align-items: baseline;
+        gap: 8px;
+        transform: translateX(-50%);
+        font-family: 'Oswald', sans-serif;
+        font-weight: 900;
+        pointer-events: none;
+        text-shadow: 3px 3px 0 #000, 0 0 18px rgba(0, 0, 0, 0.6);
+        white-space: nowrap;
+    }
+    .combo-display.show { display: flex; }
+    .combo-display .combo-num { font-size: 3.2rem; line-height: 1; }
+    .combo-display .combo-word { font-size: 1.4rem; letter-spacing: 3px; }
+    .combo-display.tier-1 { color: #ffffff; }
+    .combo-display.tier-2 { color: var(--duo-yellow); }
+    .combo-display.tier-3 {
+        color: #ff8a3c;
+        animation: combo-fire 0.7s ease-in-out infinite;
+    }
+    .combo-display.pop .combo-num {
+        display: inline-block;
+        animation: combo-pop 0.45s cubic-bezier(0.22, 1.6, 0.36, 1);
+    }
+    @keyframes combo-pop {
+        0% { transform: scale(2.1) rotate(-6deg); }
+        100% { transform: scale(1) rotate(0deg); }
+    }
+    @keyframes combo-fire {
+        0%, 100% { text-shadow: 3px 3px 0 #000, 0 0 14px rgba(255, 110, 30, 0.8); }
+        50% { text-shadow: 3px 3px 0 #000, 0 0 30px rgba(255, 60, 20, 1); }
+    }
+
+    .result-rank {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 118px;
+        height: 118px;
+        margin: 6px auto 4px;
+        border: 6px solid currentColor;
+        border-radius: 50%;
+        color: var(--duo-yellow);
+        background: rgba(0, 0, 0, 0.35);
+        opacity: 0;
+    }
+    .result-rank.stamp {
+        animation: rank-stamp 0.55s cubic-bezier(0.22, 1.4, 0.36, 1) 0.45s forwards;
+    }
+    @keyframes rank-stamp {
+        0% { opacity: 0; transform: scale(3.2) rotate(-18deg); }
+        60% { opacity: 1; transform: scale(0.92) rotate(3deg); }
+        100% { opacity: 1; transform: scale(1) rotate(-6deg); }
+    }
+    .rank-letter {
+        font: 900 3.6rem/1 'Oswald', sans-serif;
+        text-shadow: 2px 2px 0 #000;
+    }
+    .rank-caption {
+        font: 900 0.72rem 'Oswald', sans-serif;
+        letter-spacing: 4px;
+        margin-top: 2px;
+    }
+    .result-rank.rank-s { color: var(--duo-yellow); box-shadow: 0 0 34px rgba(253, 219, 0, 0.65); }
+    .result-rank.rank-a { color: #66e0ff; box-shadow: 0 0 26px rgba(102, 224, 255, 0.5); }
+    .result-rank.rank-b { color: #7dff9b; box-shadow: 0 0 22px rgba(125, 255, 155, 0.45); }
+    .result-rank.rank-c { color: #ffffff; }
+    .result-rank.rank-d { color: var(--text-muted); }
+    .result-rank.rank-f { color: var(--duo-red); box-shadow: 0 0 30px rgba(211, 16, 16, 0.7); }
+
+    .result-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        max-width: 560px;
+        margin: 6px auto 18px;
+    }
+    .stat-box {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 12px 8px;
+        border: 2px solid rgba(255, 255, 255, 0.25);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.08);
+    }
+    .stat-label {
+        color: var(--text-muted);
+        font: 900 0.72rem 'Oswald', sans-serif;
+        letter-spacing: 2px;
+    }
+    .stat-value {
+        color: #ffffff;
+        font: 900 1.7rem/1 'Oswald', sans-serif;
+        text-shadow: 2px 2px 0 #000;
+    }
+
+    .glitch { animation: glitch 0.28s steps(2, end) 6; }
+    @keyframes glitch {
+        0% { transform: translate(0); filter: none; }
+        25% { transform: translate(-4px, 2px) skewX(-4deg); filter: hue-rotate(-40deg); }
+        50% { transform: translate(4px, -2px) skewX(3deg); filter: hue-rotate(30deg); }
+        75% { transform: translate(-2px, -1px); filter: none; }
+        100% { transform: translate(0); }
+    }
+
+    .modal-box {
+        animation: modal-pop 0.28s cubic-bezier(0.22, 1.4, 0.36, 1);
+    }
+    .practice-overlay.active .practice-box {
+        animation: modal-pop 0.3s cubic-bezier(0.22, 1.4, 0.36, 1);
+    }
+    @keyframes modal-pop {
+        0% { opacity: 0; transform: scale(0.82) translateY(14px); }
+        100% { opacity: 1; transform: none; }
+    }
+
+    @media (max-width: 600px) {
+        .combo-display { top: 12px; }
+        .combo-display .combo-num { font-size: 2.3rem; }
+        .combo-display .combo-word { font-size: 1rem; letter-spacing: 2px; }
+        .sound-button { right: 58px; }
+        .result-stats { gap: 8px; }
+        .stat-value { font-size: 1.3rem; }
+        .result-rank { width: 96px; height: 96px; border-width: 5px; }
+        .rank-letter { font-size: 2.9rem; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .view.active { animation: fade-in 0.2s ease-out forwards; }
+        .duo-title-main,
+        .combo-display.tier-3,
+        .timer-container.danger,
+        .fx-shake,
+        .fx-shake-strong,
+        .glitch { animation: none; }
+        .result-rank { opacity: 1; transform: rotate(-6deg); }
+        .result-rank.stamp { animation: none; }
+        .btn:hover::after { left: -80%; transition: none; }
     }

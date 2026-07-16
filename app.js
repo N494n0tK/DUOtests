@@ -1,10 +1,15 @@
 let currentQuestions = [];
 let currentIndex = 0;
 let score = 0;
-let mistakes = []; 
-let timeLeft = 30; 
+let mistakes = [];
+let timeLeft = 30;
 let timerInterval;
 const TIME_LIMIT = 30;
+
+let combo = 0;
+let maxCombo = 0;
+let totalPoints = 0;
+let lastTickSecond = null;
 
 let isSuddenDeath = false;
 let isPracticeMode = false;
@@ -66,6 +71,58 @@ const practiceQuestionNumber = document.getElementById('practice-question-number
 const practiceCorrection = document.getElementById('po-correction');
 const warningImportInput = document.getElementById('warning-import-input');
 const warningDataStatus = document.getElementById('warning-data-status');
+const comboDisplay = document.getElementById('combo-display');
+const timerContainer = document.querySelector('.timer-container');
+const questionWrapper = document.querySelector('.question-wrapper');
+const soundToggle = document.getElementById('sound-toggle');
+
+function questionCenter() {
+    const rect = questionWrapper.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) {
+        return { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+    }
+    return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+}
+
+function showCombo(count) {
+    if (count < 2) {
+        hideCombo();
+        return;
+    }
+    const tier = count >= 10 ? 3 : count >= 5 ? 2 : 1;
+    comboDisplay.innerHTML = `<span class="combo-num">${count}</span><span class="combo-word">COMBO</span>`;
+    comboDisplay.className = `combo-display show tier-${tier}`;
+    comboDisplay.classList.remove('pop');
+    void comboDisplay.offsetWidth;
+    comboDisplay.classList.add('pop');
+}
+
+function hideCombo() {
+    comboDisplay.classList.remove('show', 'pop', 'tier-1', 'tier-2', 'tier-3');
+}
+
+function flashQuestion(isCorrect) {
+    questionWrapper.classList.remove('flash-good', 'flash-bad');
+    void questionWrapper.offsetWidth;
+    questionWrapper.classList.add(isCorrect ? 'flash-good' : 'flash-bad');
+}
+
+function animateNumber(el, target, duration, formatter) {
+    const format = formatter || (v => String(v));
+    const start = performance.now();
+    function step(now) {
+        const progress = Math.min(1, (now - start) / duration);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        el.textContent = format(Math.round(target * eased));
+        if (progress < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+}
+
+function updateSoundToggle() {
+    soundToggle.textContent = SFX.enabled ? '🔊' : '🔇';
+    soundToggle.title = SFX.enabled ? '効果音 ON' : '効果音 OFF';
+}
 
 function handleModeChange(mode) {
     if (mode === 'sudden' && suddenDeathCheck.checked) {
@@ -150,6 +207,15 @@ function init() {
     document.getElementById('warning-export-button').addEventListener('click', exportWarningData);
     document.getElementById('warning-import-button').addEventListener('click', () => warningImportInput.click());
     warningImportInput.addEventListener('change', importWarningData);
+    updateSoundToggle();
+    soundToggle.addEventListener('click', () => {
+        SFX.toggle();
+        updateSoundToggle();
+        SFX.play('click');
+    });
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('button:not(#sound-toggle), .mode-option, .duo-check')) SFX.play('click');
+    });
 
     document.addEventListener('keydown', (e) => {
         if (insertApostropheShortcut(e)) return;
@@ -727,7 +793,12 @@ function startQuiz() {
     currentIndex = 0;
     score = 0;
     mistakes = [];
-    
+    combo = 0;
+    maxCombo = 0;
+    totalPoints = 0;
+    hideCombo();
+
+    SFX.play('start');
     switchView('quiz');
     loadQuestion();
 }
@@ -763,6 +834,7 @@ function loadQuestion() {
 }
 
 function resetTimerBar() {
+    timerContainer.classList.remove('danger');
     timerBar.style.transition = 'none';
     timerBar.style.width = '100%';
     void timerBar.offsetWidth; 
@@ -772,15 +844,25 @@ function resetTimerBar() {
 
 function startTimer(reset = true) {
     clearInterval(timerInterval);
-    if (reset) timeLeft = TIME_LIMIT;
+    if (reset) {
+        timeLeft = TIME_LIMIT;
+        lastTickSecond = null;
+    }
     timeText.textContent = `TIME: ${timeLeft.toFixed(1)}`;
     timeText.style.color = timeLeft <= 5 ? 'var(--duo-red)' : 'var(--duo-yellow)';
+    timerContainer.classList.toggle('danger', timeLeft <= 5);
 
     timerInterval = setInterval(() => {
         timeLeft -= 0.1;
         timeText.textContent = `TIME: ${Math.max(0, timeLeft).toFixed(1)}`;
         if (timeLeft <= 5) {
             timeText.style.color = 'var(--duo-red)';
+            timerContainer.classList.add('danger');
+            const whole = Math.ceil(timeLeft);
+            if (timeLeft > 0 && whole !== lastTickSecond) {
+                lastTickSecond = whole;
+                SFX.play('tick');
+            }
         }
         if (timeLeft <= 0) {
             submitAnswer(true);
@@ -825,6 +907,7 @@ function resumeQuiz() {
 
 function quitQuizFromPause() {
     clearInterval(timerInterval);
+    hideCombo();
     pauseModal.hidden = true;
     practiceOverlay.classList.remove('active', 'correction-mode');
     isQuizPaused = false;
@@ -903,9 +986,22 @@ function submitAnswer(isTimeUp = false) {
     const isCorrect = !isTimeUp && (userAnswerClean === correctAnswerClean);
 
     if (isCorrect) {
+        combo++;
+        maxCombo = Math.max(maxCombo, combo);
+        const timeBonus = Math.max(0, Math.round(timeLeft * 10));
+        const gained = Math.round((100 + timeBonus) * (1 + (combo - 1) * 0.1));
+        totalPoints += gained;
+
+        const center = questionCenter();
+        FX.correctBurst(center.x, center.y, combo);
+        FX.floatText(center.x, center.y - 70, `+${gained}`, '#fddb00', 34);
+        showCombo(combo);
+        flashQuestion(true);
+        SFX.play('correct', combo);
+
         triggerPopAnim(true);
         if (!hasMistakedCurrent) score++;
-        
+
         currentIndex++;
         if (currentIndex < currentQuestions.length) loadQuestion();
         else showResult(false);
@@ -914,6 +1010,14 @@ function submitAnswer(isTimeUp = false) {
             mistakes.push({ ja: q.ja, en: q.en, isTimeUp: isTimeUp, userAns: rawUserAnswer });
             hasMistakedCurrent = true;
         }
+
+        combo = 0;
+        hideCombo();
+        const center = questionCenter();
+        FX.wrongBurst(center.x, center.y);
+        FX.shake(isSuddenDeath);
+        flashQuestion(false);
+        SFX.play('wrong');
 
         if (isSuddenDeath) {
             triggerPopAnim(false);
@@ -932,32 +1036,65 @@ function submitAnswer(isTimeUp = false) {
     }
 }
 
+function getRank(isGameOver, accuracy) {
+    if (isGameOver) return 'F';
+    if (accuracy === 100) return 'S';
+    if (accuracy >= 85) return 'A';
+    if (accuracy >= 70) return 'B';
+    if (accuracy >= 50) return 'C';
+    return 'D';
+}
+
 function showResult(isGameOver = false) {
     clearInterval(timerInterval);
+    hideCombo();
     switchView('result');
     const total = currentQuestions.length;
-    document.getElementById('final-score').textContent = `${score} / ${total}`;
-    
+    const accuracy = total > 0 ? Math.round((score / total) * 100) : 0;
+    const rank = getRank(isGameOver, accuracy);
+
+    const finalScore = document.getElementById('final-score');
+    animateNumber(finalScore, score, 900, v => `${v} / ${total}`);
+    animateNumber(document.getElementById('stat-points'), totalPoints, 1300, v => v.toLocaleString());
+    animateNumber(document.getElementById('stat-accuracy'), accuracy, 1100, v => `${v}%`);
+    animateNumber(document.getElementById('stat-combo'), maxCombo, 1100);
+
+    const rankBadge = document.getElementById('result-rank');
+    document.getElementById('rank-letter').textContent = rank;
+    rankBadge.className = `result-rank rank-${rank.toLowerCase()}`;
+    void rankBadge.offsetWidth;
+    rankBadge.classList.add('stamp');
+
     const title = document.getElementById('result-title');
     const msg = document.getElementById('result-message');
-    
+    title.classList.remove('glitch');
+
     if (isGameOver) {
         title.textContent = "SYSTEM FAILURE";
         title.style.color = "var(--duo-red)";
+        title.classList.add('glitch');
         msg.textContent = "サドンデス終了。";
         msg.style.color = 'var(--duo-red)';
+        FX.shake(true);
+        SFX.play('gameover');
     } else {
         title.textContent = "MISSION COMPLETE";
         title.style.color = "var(--duo-yellow)";
         if (score === total) {
-            msg.textContent = "Perfect! Flawless victory! 🏆"; 
+            msg.textContent = "Perfect! Flawless victory! 🏆";
             msg.style.color = 'var(--duo-yellow)';
+            FX.fireworks(8);
+            FX.confettiRain(140);
+            SFX.play('perfect');
         } else if (score >= total * 0.7) {
             msg.textContent = "Great job! Keep it up! 👍";
             msg.style.color = '#ffffff';
+            FX.confettiRain(90);
+            SFX.play('fanfare');
         } else {
             msg.textContent = "Keep trying! 反復練習あるのみ！🔥";
             msg.style.color = 'var(--duo-red)';
+            SFX.play('fanfare');
         }
     }
 
